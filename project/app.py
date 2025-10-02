@@ -5,8 +5,15 @@ from pathlib import Path
 from functools import wraps  # <-- added
 
 from flask import (
-    Flask, render_template, request, session, flash,
-    redirect, url_for, abort, jsonify
+    Flask,
+    render_template,
+    request,
+    session,
+    flash,
+    redirect,
+    url_for,
+    abort,
+    jsonify,
 )
 from flask_sqlalchemy import SQLAlchemy
 import os
@@ -18,7 +25,7 @@ DATABASE = "flaskr.db"
 USERNAME = "admin"
 PASSWORD = "admin"
 SECRET_KEY = "change_me"
-url = os.getenv('DATABASE_URL', f'sqlite:///{Path(basedir).joinpath(DATABASE)}')
+url = os.getenv("DATABASE_URL", f"sqlite:///{Path(basedir).joinpath(DATABASE)}")
 
 if url.startswith("postgres://"):
     url = url.replace("postgres://", "postgresql://", 1)
@@ -37,16 +44,14 @@ from project import models  # noqa: E402 (must come after db is defined)
 with app.app_context():
     db.create_all()
 
+
 # --- views ---
 @app.route("/")
 def index():
     """Searches the database for entries, then displays them."""
-    entries = (
-        db.session.query(models.Post)
-        .order_by(models.Post.id.desc())
-        .all()
-    )
+    entries = db.session.query(models.Post).order_by(models.Post.id.desc()).all()
     return render_template("index.html", entries=entries)
+
 
 @app.route("/add", methods=["POST"])
 def add_entry():
@@ -58,6 +63,7 @@ def add_entry():
     db.session.commit()
     flash("New entry was successfully posted")
     return redirect(url_for("index"))
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -74,12 +80,14 @@ def login():
             return redirect(url_for("index"))
     return render_template("login.html", error=error)
 
+
 @app.route("/logout")
 def logout():
     """User logout/authentication/session management."""
     session.pop("logged_in", None)
     flash("You were logged out")
     return redirect(url_for("index"))
+
 
 # --- NEW: login required decorator ---
 def login_required(f):
@@ -89,7 +97,9 @@ def login_required(f):
             flash("Please log in.")
             return jsonify({"status": 0, "message": "Please log in."}), 401
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 @app.route("/delete/<int:post_id>", methods=["GET"])
 @login_required  # <-- added
@@ -106,13 +116,15 @@ def delete_entry(post_id):
         result = {"status": 0, "message": repr(e)}
     return jsonify(result)
 
-@app.route('/search/', methods=['GET'])
+
+@app.route("/search/", methods=["GET"])
 def search():
     query = request.args.get("query")
     entries = db.session.query(models.Post)
     if query:
-        return render_template('search.html', entries=entries, query=query)
-    return render_template('search.html')
+        return render_template("search.html", entries=entries, query=query)
+    return render_template("search.html")
+
 
 if __name__ == "__main__":
     app.run()
