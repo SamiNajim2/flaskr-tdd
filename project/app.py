@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from functools import wraps  # <-- added
 
 from flask import (
     Flask, render_template, request, session, flash,
@@ -74,19 +75,30 @@ def logout():
     flash("You were logged out")
     return redirect(url_for("index"))
 
+# --- NEW: login required decorator ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            flash("Please log in.")
+            return jsonify({"status": 0, "message": "Please log in."}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/delete/<int:post_id>", methods=["GET"])
+@login_required  # <-- added
 def delete_entry(post_id):
     """Deletes post from database."""
     result = {"status": 0, "message": "Error"}
     try:
-        db.session.query(models.Post).filter_by(id=post_id).delete()
+        new_id = post_id
+        db.session.query(models.Post).filter_by(id=new_id).delete()
         db.session.commit()
         result = {"status": 1, "message": "Post Deleted"}
         flash("The entry was deleted.")
     except Exception as e:
         result = {"status": 0, "message": repr(e)}
     return jsonify(result)
-
 
 @app.route('/search/', methods=['GET'])
 def search():

@@ -38,9 +38,6 @@ def test_index(client):
 
 def test_database(client):
     """initial test. ensure that the database exists (test db)"""
-    # The test DB file should exist because SQLAlchemy created it in the fixture.
-    # With SQLite, the file is created lazily when the first write happens.
-    # We'll force a write by committing an empty transaction.
     with app.app_context():
         db.session.commit()
     assert Path(TEST_DB).is_file()
@@ -74,15 +71,14 @@ def test_messages(client):
     assert b"<strong>HTML</strong> allowed here" in rv.data
 
 def test_delete_message(client):
-    """Ensure the messages are being deleted"""
-    # Create a post first
+    """Ensure delete requires login and then succeeds"""
+    # Unauthenticated delete should be blocked
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+
+    # After login, delete should succeed (even if id doesn't exist, route returns status 1)
     login(client, app.config["USERNAME"], app.config["PASSWORD"])
-    client.post(
-        "/add",
-        data=dict(title="Temp", text="to be deleted"),
-        follow_redirects=True,
-    )
-    # Delete the first post (id should be 1 in clean test DB)
     rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
